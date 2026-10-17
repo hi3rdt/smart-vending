@@ -1,12 +1,16 @@
-// Demo: replays a shopping session (normal purchase + put-back) against the
-// widgets, the way the app reacts to server events. Swap `_DemoSession` for the
-// real WebSocket/SSE stream of session + cart events from your backend.
+// Demo shell: sign in (FakeAuthRepository), then replay a shopping session
+// (normal purchase + put-back) against the widgets, the way the app reacts to
+// server events. Swap FakeAuthRepository for the HTTP client and `_script` for
+// the real WebSocket/SSE stream of session + cart events from your backend.
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'auth/auth_repository.dart';
+import 'auth/session_controller.dart';
 import 'data/catalog.dart';
+import 'screens/auth/login_screen.dart';
 import 'theme/sv_theme.dart';
 import 'theme/sv_tokens.dart';
 import 'util/money.dart';
@@ -25,6 +29,13 @@ class SmartVendingDemoApp extends StatefulWidget {
 
 class _SmartVendingDemoAppState extends State<SmartVendingDemoApp> {
   ThemeMode _mode = ThemeMode.system;
+  final SessionController _session = SessionController(FakeAuthRepository());
+
+  @override
+  void dispose() {
+    _session.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,18 +45,24 @@ class _SmartVendingDemoAppState extends State<SmartVendingDemoApp> {
       theme: SvTheme.light(),
       darkTheme: SvTheme.dark(),
       themeMode: _mode,
-      home: SessionScreen(
-        // Starts from the system setting, then flips between explicit light/dark.
-        onToggleTheme: () => setState(() {
-          // No MediaQuery above MaterialApp yet, so read the platform directly.
-          final bool systemDark =
-              WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
-          final bool isDark = _mode == ThemeMode.dark || (_mode == ThemeMode.system && systemDark);
-          _mode = isDark ? ThemeMode.light : ThemeMode.dark;
-        }),
+      // Signed out -> login; signed in -> demo session. Rebuilds on every
+      // session change (sign-in, refresh, sign-out, expiry).
+      home: ListenableBuilder(
+        listenable: _session,
+        builder: (BuildContext context, _) => _session.isSignedIn
+            ? SessionScreen(session: _session, onToggleTheme: _toggleTheme)
+            : LoginScreen(session: _session, showDemoAccounts: true),
       ),
     );
   }
+
+  // Starts from the system setting, then flips between explicit light/dark.
+  void _toggleTheme() => setState(() {
+        // No MediaQuery above MaterialApp yet, so read the platform directly.
+        final bool systemDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+        final bool isDark = _mode == ThemeMode.dark || (_mode == ThemeMode.system && systemDark);
+        _mode = isDark ? ThemeMode.light : ThemeMode.dark;
+      });
 }
 
 /// One scripted server event.
@@ -95,8 +112,9 @@ final List<_Event> _script = <_Event>[
 ];
 
 class SessionScreen extends StatefulWidget {
-  const SessionScreen({super.key, required this.onToggleTheme});
+  const SessionScreen({super.key, required this.session, required this.onToggleTheme});
 
+  final SessionController session;
   final VoidCallback onToggleTheme;
 
   @override
@@ -166,6 +184,11 @@ class _SessionScreenState extends State<SessionScreen> {
         ),
         actions: <Widget>[
           IconButton(
+            tooltip: 'Đăng xuất',
+            onPressed: widget.session.signOut,
+            icon: const Icon(Icons.logout_rounded),
+          ),
+          IconButton(
             tooltip: 'Đổi giao diện sáng/tối',
             onPressed: widget.onToggleTheme,
             icon: const Icon(Icons.contrast_rounded),
@@ -177,6 +200,7 @@ class _SessionScreenState extends State<SessionScreen> {
           padding: const EdgeInsets.all(SvSpace.s4),
           children: <Widget>[
             const SizedBox(height: SvSpace.s4),
+            Text('Chào ${widget.session.user?.firstName ?? 'bạn'},', style: t.bodySmall),
             Text(_headline, style: t.titleLarge),
             if (done)
               Padding(

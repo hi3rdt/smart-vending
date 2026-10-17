@@ -20,11 +20,17 @@ lib/
   widgets/session_stepper.dart  3-step customer progress (driven by server state)
   widgets/cart.dart        CartLine, CartItemTile, SvCart (live cart, quantity bubbles, subtotal)
   widgets/logo.dart        SvLogoImage(kind: icon | horizontal | stacked) - picks the light or reversed file by theme
-  main.dart                Demo: replays one shopping session against the widgets
+  widgets/note.dart        SvNote: warm (amber) / soft (mint) inline notes
+  auth/auth_validators.dart  Email, password, name, invite-code validators (Vietnamese messages)
+  auth/auth_repository.dart  AuthRepository contract + FakeAuthRepository (demo accounts, token rotation)
+  auth/session_controller.dart  SessionController: sign-in/up/out, auto refresh before token expiry
+  screens/auth/            LoginScreen, RegisterScreen (email or QR invite), ForgotPasswordScreen
+  main.dart                Demo: sign in, then replay one shopping session against the widgets
 assets/
   logo/                    6 SVGs: icon, horizontal, stacked x (light, _dark)
   app_icon/                icon_1024.png (opaque) + icon_foreground_1024.png (adaptive icon foreground)
 test/widgets_test.dart     VND formatting, cart math, catalog/weight tolerance, stepper, logo paths
+test/auth_test.dart        Validators, QR invite parsing, fake repo, token refresh, login screen
 ```
 
 ## Getting started
@@ -54,6 +60,14 @@ final SvColors c = SvColors.of(context);   // tokens Material has no slot for (w
 Text(formatVnd(order.totalVnd), style: Theme.of(context).textTheme.titleLarge);
 const SvLogoImage(kind: SvLogoKind.horizontal, height: 40);
 ```
+
+## Sign-in
+
+- Demo accounts (FakeAuthRepository): `demo@smartvending.vn` / `123456` (customer), `admin@smartvending.vn` / `admin123` (admin).
+- Replace `FakeAuthRepository` with an HTTP client implementing `AuthRepository` (`/auth/login`, `/auth/register`, `/auth/refresh`, `/auth/forgot`). Store the refresh token with `flutter_secure_storage` and call `SessionController.restore()` at startup.
+- `SessionController` refreshes the access token 60 s before expiry; if refresh fails the user is signed out and the login screen explains why.
+- QR invite: pass `onScanInvite` (e.g. a `mobile_scanner` page returning the raw payload) to `LoginScreen`; `inviteCodeFromQr()` accepts a bare `SV-A03-7K2Q` or a link with `?code=`.
+- Admin-only UI checks `user.canAdmin`; the server must enforce roles too.
 
 ## Rules for contributors
 
