@@ -1,0 +1,35 @@
+name: smart_vending_ui
+description: Smart Vending design system for Flutter - tokens, light/dark theme and core widgets.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0" # WidgetState / surfaceContainer* APIs
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.2.1 # Be Vietnam Pro (full Vietnamese diacritics)
+  flutter_svg: ^2.0.10 # Open Cabinet logo (light + reversed dark set)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1 # dart run flutter_launcher_icons
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo/
+
+# App icon generated from the Open Cabinet mark (design system: icon_smartvending).
+# Run: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/app_icon/icon_1024.png # opaque, white ground (iOS rejects alpha)
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/app_icon/icon_foreground_1024.png # mark inside the 66% safe zone
